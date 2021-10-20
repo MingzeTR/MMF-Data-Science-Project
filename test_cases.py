@@ -79,28 +79,90 @@ def recommendation_system(inputitem_df, ratings_df, userSubsetCate_df):
     return recommendation_df
 
 
+def create_userSubsetCate_df(user_id, rating_df, inputItems_df):
+    """
+    Function: create_userSubsetCate_df
+    Input:
+          user_id: (String) - id of selected Pikaqiu
+          rating_df: (DataFrame) - the dataframe of overall item-base user rating records
+          inputItems_df: (DataFrame) - the dataframe of all items Pikachu has rated and the corresponding ratings
+                                     Output of create_inputItems_df
+
+    Output:
+          userSubsetCate_df: (DataFrame) - the dataframe of other users with common categories of item in inputItems_df
+                                           and their corresponding mean rating of category-based
+                                           !!! DOES NOT INCLUDE RECORDS OF PIKAQIU !!!
+                             Column name: user_id(primary key for user),
+                                          cate_name(the category the user has rated before)
+                                          rating (average rating of each category),
+    """
+    # Find the categories that Pikachu has rated, and calculate the rating of each category using average
+    inputCates_df = inputItems_df.groupby(['cate_name']).mean().reset_index()
+
+    # Find all rating records of user who have rated items in same category which Pikachu has rated before (in inputCates_df)
+    userSubset_df = rating_df[rating_df['cate_name'].isin(inputCates_df['cate_name'].tolist())]
+
+    # Group all rating records by user_id and cate_name, get each user's average rating for each category
+    userSubsetCate_df = userSubset_df.groupby(['user_id', 'cate_name']).mean().reset_index()
+
+    # Drop the selected Pikaqiu from the DataFrame
+    userSubsetCate_df.drop(userSubsetCate_df[userSubsetCate_df['user_id'] == user_id].index, inplace=True)
+
+    return userSubsetCate_df
+
+
+
+
+def create_inputItems_df(user_id, rating_df):
+    """
+    Function: create_inputItems_df
+    Input:
+      user_id: (String) - id of selected Pikaqiu
+      rating_df: (DataFrame) - the dataframe of overall item-base user rating records
+
+    Output:
+      inputItems_df: (DataFrame) - include all items Pikachu has rated and the corresponding ratings
+                     Column name: item_id(primary key for item),
+                                  rating,
+                                  datetime(from timestamp, converted to YYYY-MM-DD format),
+                                  cate_name(the category the item belongs to)
+    """
+    pikachu_df = rating_df.loc[rating_df['user_id'] == user_id]
+    inputItems_df = pikachu_df.drop(['user_id'], 1)
+
+    return inputItems_df
+
+
 if __name__ == '__main__':
-    # Storing the input item information into a pandas dataframe
-    inputitem_df = pd.read_csv('inputItems.csv')
-    # Storing the user information into a pandas dataframe
-    ratings_df = pd.read_csv('ratings.csv')
-    # Storing the mean rating of other users with common category
-    userSubsetCate_df = pd.read_csv('userSubsetCate.csv')
+    # # Storing the input item information into a pandas dataframe
+    # inputitem_df = pd.read_csv('inputItems.csv')
+    # # Storing the user information into a pandas dataframe
+    ratings_df = pd.read_csv('ratings_2018.csv')
+    # # Storing the mean rating of other users with common category
+    # userSubsetCate_df = pd.read_csv('userSubsetCate.csv')
+
+    # filename = "Patio_Lawn_and_Garden.csv"
+    # ratings_df = pd.read_csv(filename, names=("item_id", "user_id", "rating", "timestamp"))
+    # ratings_df['datetime'] = pd.to_datetime(ratings_df['timestamp'], unit='s')
+    # ratings_df.drop(['timestamp'], 1, inplace=True)
+    # itemCate_df = pd.read_csv('itemCate_2018.csv', usecols=["item_id", "cate_name"])
+    # ratings_df = pd.merge(ratings_df, itemCate_df, how='left', on='item_id')
+    # ratings_df.to_csv('ratings_2018.csv')
 
     # for the test, we will use 5% of the dataset grouped by user_id. Within a user's purchase history, we save the last
     # 3 purchase records as the comparing group, and the rest purchases as inputs into the model. Calculate the
     # percentage of the output that is in the comparing group
 
     # we know that there are 111,233 user_id in the group, we are using 100 ids as test cases.
-    test_group = userSubsetCate_df[
-        userSubsetCate_df['user_id'].groupby(userSubsetCate_df['user_id']).transform('size') >= 4
-        ]
+    test_group = ratings_df[ratings_df['user_id'].groupby(ratings_df['user_id']).transform('size') >= 10]
 
     success_rate = 0
     test_counts = 0
     for userid, group in test_group.groupby('user_id'):
-        compare_group = group.tail(2)
-        inputitem_df = group.drop(group.tail(2).index)
+        inputitem_df = create_inputItems_df(userid, ratings_df)
+        compare_group = inputitem_df.tail(2)
+        inputitem_df = inputitem_df.drop(group.tail(2).index)
+        userSubsetCate_df = create_userSubsetCate_df(userid, ratings_df, inputitem_df)
         recommend_outcome = recommendation_system(inputitem_df, ratings_df, userSubsetCate_df)
 
         if True in \
@@ -113,5 +175,7 @@ if __name__ == '__main__':
         if test_counts == 100:
             break
 
+        # save some memory
+        del inputitem_df, compare_group, userSubsetCate_df, recommend_outcome
         print(success_rate, test_counts)
     print(success_rate / 100)
