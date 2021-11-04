@@ -5,7 +5,7 @@
 
 <ul>
 <li>Create_itemCate.ipynb - Create item-category information csv (itemCate_2018.csv) from json data</li>
-<li>DataPreProcess.ipynb - Preprocessing ratings data and create:
+<li>DataPreProcess.ipynb - Preprocessing ratings data and create following data files:
                          <ul>
                          <li>inputItems.csv - Include all items the target user has rated and the corresponding ratings</li>
                          <li> userSubsetCate.csv - The dataframe of other users with common categories of item in 'inputItems.csv' and their corresponding mean rating of category-based</li>
