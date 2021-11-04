@@ -13,8 +13,9 @@
 <li>recommend_system_code.ipynb - Actually recommendation system code for target user</li>
 </ul>
 
+
 <p>Test Case Files:</p>
 <ul>
 <li>DataCleanandPreProcess_FunctionVer.ipynb - Function version of data processing</li>
 
-<li>test_cases.py - Test case and generate test result</li>
+<li>test_cases.py - Test case, generate and validate test result</li>
